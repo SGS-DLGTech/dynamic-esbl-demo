@@ -1,4 +1,10 @@
 import { Conversation} from '@/components/conversation';
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+	title: "Dynamic ESBL",
+	description: "Dynamic conversation with eSBL",
+};
 
 export default function Home() {
   return (

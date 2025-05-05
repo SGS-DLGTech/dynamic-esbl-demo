@@ -19,7 +19,7 @@ export function Conversation() {
 
       // Start the conversation with your agent
       await conversation.startSession({
-        agentId: 'Hk5fKEM42MMB04hDUyuq', // Replace with your agent ID
+        agentId: process.env.NEXT_PUBLIC_ELEVENLABS_CONVERSATIONAL_AGENT_GO_DADDY_1 as string,
       });
 
     } catch (error) {
