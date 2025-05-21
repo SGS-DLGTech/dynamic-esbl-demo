@@ -1,9 +1,9 @@
-// conversation.tsx
 "use client";
 
 import { useConversation } from "@11labs/react";
 import { useCallback, useState, useEffect, useRef } from "react";
 import Feedback from "./feedback";
+import { LoadingSpinner } from "./loadingSpinner";
 
 // Define a Status enum at the top level
 enum Status {
@@ -26,9 +26,8 @@ interface FeedbackState {
 
 export function Conversation() {
   const [transcript, setTranscript] = useState<Message[]>([]);
-  // --- THIS IS THE LINE TO UPDATE ---
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  // --- END OF UPDATE ---
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState<boolean>(false); // New state for loading indicator
   const transcriptRef = useRef<HTMLDivElement>(null);
 
   // Ref to hold the latest transcript for use in callbacks that might otherwise close over stale state
@@ -58,7 +57,8 @@ export function Conversation() {
 
   // NEW: Extracted function to send transcript to audit API
   const sendTranscriptForAudit = useCallback(async (currentTranscript: Message[]) => {
-    // Your instruction for Gemini, prepended to the transcript
+    setIsLoadingFeedback(true); // Set loading to true when starting the request
+    setFeedback(null); // Clear previous feedback
 
     const prePromptInstruction = `You are an AI Quality Analyst working in a BPO setting, specialized in auditing customer service conversations.
     Your task is to analyze the following transcript and provide a detailed audit report.
@@ -89,7 +89,7 @@ export function Conversation() {
     }
 
     Conversation Transcript:
-    `
+    `;
 
     // Format the transcript into a single string
     const formattedTranscript = currentTranscript
@@ -104,8 +104,8 @@ export function Conversation() {
 
     if (!finalPrompt.trim()) {
       console.warn("Prompt is empty, not sending to Gemini.");
-      // Now using 'error' property consistent with FeedbackState
       setFeedback({ error: "No conversation to audit." });
+      setIsLoadingFeedback(false); // Set loading to false on early exit
       return;
     }
 
@@ -120,7 +120,7 @@ export function Conversation() {
 
       if (response.ok) {
         const geminiFeedback = await response.json();
-        setFeedback(geminiFeedback); // This should align with { text: "..." }
+        setFeedback(geminiFeedback);
         console.log("Gemini Feedback:", geminiFeedback);
       } else {
         const errorText = await response.text();
@@ -129,22 +129,20 @@ export function Conversation() {
           response.status,
           errorText
         );
-        // Using 'error' property for API errors
         setFeedback({ error: `Failed to get feedback (${response.status}): ${errorText}` });
       }
     } catch (error) {
       console.error("Error sending transcript to audit API:", error);
-      // Using 'error' property for fetch exceptions
       setFeedback({ error: "Failed to send transcript for audit" });
+    } finally {
+      setIsLoadingFeedback(false); // Set loading to false after the request completes (success or error)
     }
-  }, [setFeedback, formatTimestamp]); // Dependencies for this useCallback
+  }, [setFeedback, formatTimestamp]);
 
   const conversation = useConversation({
     onConnect: () => console.log("Connected"),
     onDisconnect: () => {
       console.log("Disconnected");
-      // Call the audit function here, using the latest transcript from the ref
-      // IMPORTANT: Don't call conversation.endSession() here, as it's already disconnected.
       sendTranscriptForAudit(latestTranscriptRef.current);
     },
     onMessage: (message: { message: string; source: "user" | "ai" }) => {
@@ -176,19 +174,18 @@ export function Conversation() {
       });
       setTranscript([]);
       setFeedback(null); // Clear feedback when starting a new conversation
+      setIsLoadingFeedback(false); // Ensure loading is false when starting a new conversation
     } catch (error) {
       console.error("Failed to start conversation:", error);
-      // Using 'error' property for start conversation failures
       setFeedback({ error: `Failed to start conversation: ${error instanceof Error ? error.message : String(error)}` });
+      setIsLoadingFeedback(false); // Ensure loading is false if starting fails
     }
   }, [conversation, setTranscript, setFeedback]);
 
   const stopConversation = useCallback(async () => {
-    // Explicitly end the ElevenLabs session (if not already disconnected)
     await conversation.endSession();
-    // Then call the audit function with the current transcript
     sendTranscriptForAudit(transcript);
-  }, [conversation, transcript, sendTranscriptForAudit]); // Added sendTranscriptForAudit to dependencies
+  }, [conversation, transcript, sendTranscriptForAudit]);
 
   // Save the transcript to localStorage whenever it updates
   useEffect(() => {
@@ -209,8 +206,6 @@ export function Conversation() {
     }
   }, [transcript]);
 
-  // This function is currently unused in your provided code for sending the audit result,
-  // but it's kept here as it was part of your original file.
   const getAuditResult = async (prompt: string) => {
     const res = await fetch("/api/audit", {
       method: "POST",
@@ -279,15 +274,21 @@ export function Conversation() {
               </div>
             ))}
           </div>
-        </div>  
+        </div>
       )}
 
+      {/* Loading Indicator for AI Feedback */}
+      {isLoadingFeedback && (
+        <div className="mt-4 w-3/4">
+        <LoadingSpinner message="Please wait while I review your response..." size="large" />
+      </div>
+      )}
 
       {/* Display AI's Feedback */}
-      {feedback && (
-      <div className="mt-4 w-3/4">
-        <Feedback feedback={feedback} />
-      </div>
+      {feedback && !isLoadingFeedback && ( // Only show feedback if not loading
+        <div className="mt-4 w-3/4">
+          <Feedback feedback={feedback} />
+        </div>
       )}
     </div>
   );
