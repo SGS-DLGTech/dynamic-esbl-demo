@@ -1,7 +1,9 @@
+// conversation.tsx
 "use client";
 
 import { useConversation } from "@11labs/react";
 import { useCallback, useState, useEffect, useRef } from "react";
+import Feedback from "./feedback";
 
 // Define a Status enum at the top level
 enum Status {
@@ -11,39 +13,31 @@ enum Status {
 
 // Define the structure for a message object
 interface Message {
-  from: "You" | "Customer"; // Changed 'user' to 'You' and 'ai' to 'Customer'
+  from: "You" | "Customer";
   text: string;
-  timestamp: number; // Added timestamp property
+  timestamp: number;
+}
+
+interface FeedbackState {
+  text?: string;
+  error?: string;
+  message?: string; // For cases like "No conversation to audit."
 }
 
 export function Conversation() {
   const [transcript, setTranscript] = useState<Message[]>([]);
-  const [feedback, setFeedback] = useState<Record<string, string> | null>(null); // State to store Gemini feedback
-  const transcriptRef = useRef<HTMLDivElement>(null); // Ref for the transcript container
-  const conversation = useConversation({
-    onConnect: () => console.log("Connected"),
-    onDisconnect: () => console.log("Disconnected"),
-    onMessage: (message: { message: string; source: "user" | "ai" }) => {
-      console.log("Message:", message);
-      const newMessage: Message = {
-        // Explicitly type newMessage
-        from: message.source === "user" ? "You" : "Customer",
-        text: message.message,
-        timestamp: Date.now(), // Add timestamp directly here
-      };
-      // Update the transcript with the new message, using 'source'
-      setTranscript((prevTranscript) => [
-        // Create a new array with existing messages and add timestamp if missing
-        ...(prevTranscript.map((msg) => ({
-          ...msg,
-          timestamp: msg.timestamp || 0, // Add default timestamp if missing
-          from: msg.from, // Assign directly, as it's already the correct type
-        })) as Message[]), // Cast to Message[]
-        newMessage,
-      ]);
-    },
-    onError: (error) => console.error("Error:", error),
-  });
+  // --- THIS IS THE LINE TO UPDATE ---
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  // --- END OF UPDATE ---
+  const transcriptRef = useRef<HTMLDivElement>(null);
+
+  // Ref to hold the latest transcript for use in callbacks that might otherwise close over stale state
+  const latestTranscriptRef = useRef<Message[]>([]);
+
+  // Update the ref whenever the transcript state changes
+  useEffect(() => {
+    latestTranscriptRef.current = transcript;
+  }, [transcript]);
 
   const toTitleCase = (str: string) => {
     return str
@@ -53,27 +47,67 @@ export function Conversation() {
       .join(" ");
   };
 
-  const startConversation = useCallback(async () => {
-    try {
-      // Request microphone permission
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
 
-      // Start the conversation with your agent
-      await conversation.startSession({
-        agentId: process.env
-          .NEXT_PUBLIC_ELEVENLABS_CONVERSATIONAL_AGENT_GO_DADDY_1 as string,
-      });
-      // Clear the transcript when a new conversation starts
-      setTranscript([]);
-      setFeedback(null); // Clear previous feedback on new conversation
-    } catch (error) {
-      console.error("Failed to start conversation:", error);
+  // NEW: Extracted function to send transcript to audit API
+  const sendTranscriptForAudit = useCallback(async (currentTranscript: Message[]) => {
+    // Your instruction for Gemini, prepended to the transcript
+
+    const prePromptInstruction = `You are an AI Quality Analyst working in a BPO setting, specialized in auditing customer service conversations.
+    Your task is to analyze the following transcript and provide a detailed audit report.
+
+    For each success indicator listed below, assign a rating from **1 to 5 stars** (where 5 is the highest/best performance) and provide a **brief explanation** for your rating.
+
+    **Success Indicators:**
+    -   **Ask the right questions:** Did the representative ask clarifying, open-ended, or probing questions to understand the customer's situation thoroughly?
+    -   **Initiate sales discovery:** Did the representative identify potential upselling or cross-selling opportunities, or explore additional customer needs that could lead to a sale?
+    -   **Actively listen:** Did the representative show signs of understanding, allow the customer to speak without interruption, and respond appropriately to unspoken cues?
+    -   **Identify the customer's issue:** Was the representative able to quickly and accurately pinpoint the core problem or request the customer had?
+    -   **Provide acknowledgment, empathy, and reassurance:** Did the representative validate the customer's feelings, show understanding, and assure them that their issue would be handled?
+    -   **Educate the customer:** Did the representative clearly explain solutions, product features, or next steps in an understandable way?
+
+    **Format your response as a JSON object** with the following structure:
+    {
+      "summary": "A concise summary of the conversation.",
+      "ratings": {
+        "ask_right_questions": { "stars": N, "explanation": "..." },
+        "initiate_sales_discovery": { "stars": N, "explanation": "..." },
+        "actively_listen": { "stars": N, "explanation": "..." },
+        "identify_customer_issue": { "stars": N, "explanation": "..." },
+        "provide_acknowledgment_empathy_reassurance": { "stars": N, "explanation": "..." },
+        "educate_customer": { "stars": N, "explanation": "..." }
+      },
+      "overall_sentiment": "e.g., Positive, Neutral, Negative, Escalating",
+      "areas_for_improvement": ["Suggestion 1", "Suggestion 2"]
     }
-  }, [conversation, setTranscript, setFeedback]);
 
-  const stopConversation = useCallback(async () => {
-    await conversation.endSession();
-    const currentTranscript = [...transcript];
+    Conversation Transcript:
+    `
+
+    // Format the transcript into a single string
+    const formattedTranscript = currentTranscript
+      .map(
+        (msg) =>
+          `${msg.from} (${formatTimestamp(msg.timestamp)}): ${msg.text}`
+      )
+      .join("\n"); // Join messages with a newline
+
+    // Combine the instruction with the formatted transcript
+    const finalPrompt = prePromptInstruction + formattedTranscript;
+
+    if (!finalPrompt.trim()) {
+      console.warn("Prompt is empty, not sending to Gemini.");
+      // Now using 'error' property consistent with FeedbackState
+      setFeedback({ error: "No conversation to audit." });
+      return;
+    }
 
     try {
       const response = await fetch("/api/audit", {
@@ -81,26 +115,80 @@ export function Conversation() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ transcript: currentTranscript }),
+        body: JSON.stringify({ prompt: finalPrompt }),
       });
 
       if (response.ok) {
         const geminiFeedback = await response.json();
-        setFeedback(geminiFeedback);
+        setFeedback(geminiFeedback); // This should align with { text: "..." }
         console.log("Gemini Feedback:", geminiFeedback);
       } else {
+        const errorText = await response.text();
         console.error(
           "Failed to get Gemini feedback:",
           response.status,
-          await response.text()
+          errorText
         );
-        setFeedback({ error: `Failed to get feedback (${response.status})` });
+        // Using 'error' property for API errors
+        setFeedback({ error: `Failed to get feedback (${response.status}): ${errorText}` });
       }
     } catch (error) {
       console.error("Error sending transcript to audit API:", error);
+      // Using 'error' property for fetch exceptions
       setFeedback({ error: "Failed to send transcript for audit" });
     }
-  }, [conversation, transcript, setFeedback]);
+  }, [setFeedback, formatTimestamp]); // Dependencies for this useCallback
+
+  const conversation = useConversation({
+    onConnect: () => console.log("Connected"),
+    onDisconnect: () => {
+      console.log("Disconnected");
+      // Call the audit function here, using the latest transcript from the ref
+      // IMPORTANT: Don't call conversation.endSession() here, as it's already disconnected.
+      sendTranscriptForAudit(latestTranscriptRef.current);
+    },
+    onMessage: (message: { message: string; source: "user" | "ai" }) => {
+      console.log("Message:", message);
+      const newMessage: Message = {
+        from: message.source === "user" ? "You" : "Customer",
+        text: message.message,
+        timestamp: Date.now(),
+      };
+      setTranscript((prevTranscript) => [
+        ...(prevTranscript.map((msg) => ({
+          ...msg,
+          timestamp: msg.timestamp || 0,
+          from: msg.from,
+        })) as Message[]),
+        newMessage,
+      ]);
+    },
+    onError: (error) => console.error("Error:", error),
+  });
+
+  const startConversation = useCallback(async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      await conversation.startSession({
+        agentId: process.env
+          .NEXT_PUBLIC_ELEVENLABS_CONVERSATIONAL_AGENT_GO_DADDY_1 as string,
+      });
+      setTranscript([]);
+      setFeedback(null); // Clear feedback when starting a new conversation
+    } catch (error) {
+      console.error("Failed to start conversation:", error);
+      // Using 'error' property for start conversation failures
+      setFeedback({ error: `Failed to start conversation: ${error instanceof Error ? error.message : String(error)}` });
+    }
+  }, [conversation, setTranscript, setFeedback]);
+
+  const stopConversation = useCallback(async () => {
+    // Explicitly end the ElevenLabs session (if not already disconnected)
+    await conversation.endSession();
+    // Then call the audit function with the current transcript
+    sendTranscriptForAudit(transcript);
+  }, [conversation, transcript, sendTranscriptForAudit]); // Added sendTranscriptForAudit to dependencies
 
   // Save the transcript to localStorage whenever it updates
   useEffect(() => {
@@ -121,6 +209,8 @@ export function Conversation() {
     }
   }, [transcript]);
 
+  // This function is currently unused in your provided code for sending the audit result,
+  // but it's kept here as it was part of your original file.
   const getAuditResult = async (prompt: string) => {
     const res = await fetch("/api/audit", {
       method: "POST",
@@ -130,15 +220,6 @@ export function Conversation() {
 
     const data = await res.json();
     console.log(data.text);
-  };
-
-  const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
   };
 
   return (
@@ -180,7 +261,7 @@ export function Conversation() {
 
       {/* Scrollable Transcript Container */}
       {transcript.length > 0 && (
-        <div className="mt-4 w-full max-w-md rounded border p-4 overflow-y-auto max-h-96">
+        <div className="mt-4 w-3/4 rounded border p-4 overflow-y-auto max-h-96">
           <h2 className="text-lg font-semibold mb-2">
             Conversation Transcript
           </h2>
@@ -195,23 +276,18 @@ export function Conversation() {
                 }`}
               >
                 <span className="font-semibold">{msg.from}:</span> {msg.text}
-                <span className="text-xs text-gray-500 ml-2">
-                  {formatTimestamp(msg.timestamp)}
-                </span>{" "}
               </div>
             ))}
           </div>
-        </div>
+        </div>  
       )}
+
 
       {/* Display AI's Feedback */}
       {feedback && (
-        <div className="mt-4 w-full max-w-md rounded border p-4 bg-yellow-100">
-          <h2 className="text-lg font-semibold mb-2">Feedback</h2>
-          <pre className="whitespace-pre-wrap">
-            {JSON.stringify(feedback, null, 2)}
-          </pre>
-        </div>
+      <div className="mt-4 w-3/4">
+        <Feedback feedback={feedback} />
+      </div>
       )}
     </div>
   );
