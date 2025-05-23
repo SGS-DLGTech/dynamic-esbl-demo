@@ -53,8 +53,8 @@ const scenarios: Scenarios = {
         "Scenario 2": {
             "Title": "Coaching on Tardiness",
             "Scenario ID": "agent_01jvym8ndxe7rtmms63ehpqhc5",
-            "Scenario Narrative": "Elsa Smith, a Sutherland employee who is about to be regularized, needs to be coached on her tardiness. She came in late twice last week. Prior to this, she had 3 more instances of tardiness in the previous month.",
-            "AI Rating Prompt": `You are an AI Quality Analyst specialized in evaluating management coaching effectiveness. Your task is to analyze the coaching session transcript and provide a detailed audit report.
+            "Scenario Narrative": "Elsa Smith, a Sutherland employee who is about to be regularized, needs to be coached on her tardiness. She arrived late twice last week. Prior to this, she had 3 more instances of tardiness in the previous month.",
+            "AI Rating Prompt": `You are an AI Quality Analyst specialized in evaluating management coaching effectiveness. Your task is to analyze the coaching session transcript and provide a detailed audit report. When referring to the team manager, refer to them in the second-person POV.
 
 For each success indicator listed below, assign a rating from **1 to 5 stars** (where 5 is the highest/best performance) and provide a **brief explanation** for your rating, justifying your score based on specific examples from the conversation transcript. If the manager failed to do it, the rating should be 1-2 stars. If the manager did well, the rating should be 4-5 stars.
 
