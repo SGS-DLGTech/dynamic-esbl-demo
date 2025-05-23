@@ -70,7 +70,7 @@ For each success indicator listed below, assign a rating from **1 to 5 stars** (
 
 **Format your response as a JSON object** with the following structure:
 {
-"summary": "A concise summary of the coaching session with Elsa Smith regarding her recent tardiness.",
+"summary": "A concise summary of the coaching session with Elsa regarding her recent tardiness.",
 "ratings": {
     "establish_rapport": { "stars": N, "explanation": "..." },
     "clarify_performance_gap": { "stars": N, "explanation": "..." },
