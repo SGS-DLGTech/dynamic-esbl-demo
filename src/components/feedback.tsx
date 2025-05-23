@@ -1,5 +1,5 @@
-// feedback.tsx
 import React, { useState, useEffect } from 'react';
+import { MdErrorOutline } from 'react-icons/md';
 
 // Define the type for the structure of each rating category
 interface RatingDetail {
@@ -59,14 +59,13 @@ const Feedback = ({ feedback }: FeedbackProps) => {
         const parsed = JSON.parse(jsonString);
 
         if (isParsedFeedbackContent(parsed)) {
-            setParsedFeedback(parsed);
-            setError(null);
+          setParsedFeedback(parsed);
+          setError(null);
         } else {
-            console.error("Parsed object does not match expected format:", parsed);
-            setError("AI feedback is not in the expected format. Please check console for details.");
-            setParsedFeedback(null);
+          console.error("Parsed object does not match expected format:", parsed);
+          setError("AI feedback is not in the expected format. Please check console for details.");
+          setParsedFeedback(null);
         }
-
       } catch (e) {
         if (e instanceof Error) {
           setError("Error parsing AI feedback: " + e.message + ". Raw content: " + feedback.text);
@@ -99,71 +98,65 @@ const Feedback = ({ feedback }: FeedbackProps) => {
     );
   };
 
-  const renderStars = (count: number) => {
-    return '⭐'.repeat(Math.max(0, Math.min(5, count)));
-  };
+  const renderStars = (count: number) => '⭐'.repeat(Math.max(0, Math.min(5, count)));
 
-  const formatIndicatorName = (key: string) => {
-    return key
+  const formatIndicatorName = (key: string) =>
+    key
       .replace(/_/g, ' ')
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-  };
-
-  if (error) {
-    return (
-      <div className="mt-4 w-full max-w-md rounded border p-4 bg-red-100 text-red-700">
-        <h2 className="text-lg font-semibold mb-2">Feedback Error</h2>
-        <pre className="whitespace-pre-wrap">{error}</pre>
-      </div>
-    );
-  }
-
-  if (!parsedFeedback) {
-    return (
-      <div className="mt-4 w-full max-w-md rounded border p-4 bg-gray-100 text-gray-700">
-        <p>No AI feedback to display yet.</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="mt-4 w-3/4 mx-auto rounded border p-4 bg-white">
-      <h2 className="text-lg font-semibold mb-2">AI Feedback Report</h2>
-
-      <p className="mb-3">
-        <span className="font-semibold">Summary:</span> {parsedFeedback.summary}
-      </p>
-
-      <h3 className="text-md font-semibold mb-2">Ratings:</h3>
-      {/* Changed <ul> to <div> and <li> to <div> */}
-      <div className="mb-3 space-y-3"> {/* Adjusted spacing */}
-        {Object.entries(parsedFeedback.ratings).map(([key, value]) => (
-          <div key={key}> {/* Replaced <li> with <div> */}
-            <p className="font-semibold mb-1">{formatIndicatorName(key)}:</p> {/* Made title bold and added margin */}
-            <p className="ml-4">Stars: {renderStars(value.stars)}</p> {/* Added some left margin */}
-            <p className="ml-4">Explanation: {value.explanation}</p> {/* Added some left margin */}
+    <>
+      {!parsedFeedback && !error ? (
+        <div className="mt-4 w-full max-w-md rounded border p-4 bg-gray-100 text-gray-700">
+          <p>No AI feedback to display yet.</p>
+        </div>
+      ) : error ? (
+        <div className="mt-4 w-full max-w-md mx-auto rounded border border-red-500 bg-red-100 text-red-800 p-4 flex items-start space-x-2">
+          <MdErrorOutline className="text-red-600 text-xl mt-0.5 bg-red-100" />
+          <div>
+            <p className="font-semibold bg-red-100">Feedback Error:</p>
+            <p className="whitespace-pre-wrap text-sm bg-red-100">{error}</p>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : parsedFeedback ? (
+        <div className="mt-4 w-3/4 mx-auto rounded border p-4 bg-white">
+          <h2 className="text-lg font-semibold mb-2">AI Feedback Report</h2>
 
-      <p className="mb-3">
-        <span className="font-semibold">Overall Sentiment:</span> {parsedFeedback.overall_sentiment}
-      </p>
+          <p className="mb-3">
+            <span className="font-semibold">Summary:</span> {parsedFeedback.summary}
+          </p>
 
-      {parsedFeedback.areas_for_improvement && parsedFeedback.areas_for_improvement.length > 0 && (
-        <>
-          <h3 className="text-md font-semibold mb-2">Areas for Improvement:</h3>
-          {/* Changed <ul> to <div> and <li> to <p> for areas for improvement */}
-          <div className="space-y-1">
-            {parsedFeedback.areas_for_improvement.map((area, index) => (
-              <p key={index} className="ml-4">&bull; {area}</p> 
+          <h3 className="text-md font-semibold mb-2">Ratings:</h3>
+          <div className="mb-3 space-y-3">
+            {Object.entries(parsedFeedback.ratings).map(([key, value]) => (
+              <div key={key}>
+                <p className="font-semibold mb-1">{formatIndicatorName(key)}:</p>
+                <p className="ml-4">Stars: {renderStars(value.stars)}</p>
+                <p className="ml-4">Explanation: {value.explanation}</p>
+              </div>
             ))}
           </div>
-        </>
-      )}
-    </div>
+
+          <p className="mb-3">
+            <span className="font-semibold">Overall Sentiment:</span> {parsedFeedback.overall_sentiment}
+          </p>
+
+          {parsedFeedback.areas_for_improvement.length > 0 && (
+            <>
+              <h3 className="text-md font-semibold mb-2">Areas for Improvement:</h3>
+              <div className="space-y-1">
+                {parsedFeedback.areas_for_improvement.map((area, index) => (
+                  <p key={index} className="ml-4">&bull; {area}</p>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
+    </>
   );
 };
 

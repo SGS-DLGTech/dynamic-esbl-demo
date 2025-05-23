@@ -1,17 +1,16 @@
 "use client";
 
 import { useConversation } from "@11labs/react";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import Feedback from "./feedback";
 import { LoadingSpinner } from "./loadingSpinner";
+import scenarios from "@/lib/scenariodb";
 
-// Define a Status enum at the top level
 enum Status {
   Connected = "connected",
   Disconnected = "disconnected",
 }
 
-// Define the structure for a message object
 interface Message {
   from: "You" | "Customer";
   text: string;
@@ -21,30 +20,27 @@ interface Message {
 interface FeedbackState {
   text?: string;
   error?: string;
-  message?: string; // For cases like "No conversation to audit."
+  message?: string;
 }
 
 export function Conversation() {
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [isLoadingFeedback, setIsLoadingFeedback] = useState<boolean>(false); // New state for loading indicator
+  const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState<boolean>(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
-
-  // Ref to hold the latest transcript for use in callbacks that might otherwise close over stale state
   const latestTranscriptRef = useRef<Message[]>([]);
 
-  // Update the ref whenever the transcript state changes
   useEffect(() => {
     latestTranscriptRef.current = transcript;
   }, [transcript]);
 
-  const toTitleCase = (str: string) => {
-    return str
+  const toTitleCase = (str: string) =>
+    str
       .toLowerCase()
       .split(" ")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
-  };
 
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -55,89 +51,60 @@ export function Conversation() {
     });
   };
 
-  // NEW: Extracted function to send transcript to audit API
-  const sendTranscriptForAudit = useCallback(async (currentTranscript: Message[]) => {
-    setIsLoadingFeedback(true); // Set loading to true when starting the request
-    setFeedback(null); // Clear previous feedback
+  const selectedScenarioObj = useMemo(() => {
+    return selectedScenario
+      ? Object.values(scenarios)
+          .flatMap(Object.values)
+          .find(
+            (scenario) =>
+              "Scenario ID" in scenario &&
+              scenario["Scenario ID"] === selectedScenario
+          )
+      : null;
+  }, [selectedScenario]);
 
-    const prePromptInstruction = `You are an AI Quality Analyst working in a BPO setting, specialized in auditing customer service conversations.
-    Your task is to analyze the following transcript and provide a detailed audit report.
+  const sendTranscriptForAudit = useCallback(
+    async (currentTranscript: Message[]) => {
+      setIsLoadingFeedback(true);
+      setFeedback(null);
 
-    For each success indicator listed below, assign a rating from **1 to 5 stars** (where 5 is the highest/best performance) and provide a **brief explanation** for your rating.
+      const prePromptInstruction =
+        selectedScenarioObj?.["AI Rating Prompt"] || 'Explain that you did not get a full rating instructions. Then, provide general feedback based on the transcript: ';
 
-    **Success Indicators:**
-    -   **Ask the right questions:** Did the representative ask clarifying, open-ended, or probing questions to understand the customer's situation thoroughly?
-    -   **Initiate sales discovery:** Did the representative identify potential upselling or cross-selling opportunities, or explore additional customer needs that could lead to a sale?
-    -   **Actively listen:** Did the representative show signs of understanding, allow the customer to speak without interruption, and respond appropriately to unspoken cues?
-    -   **Identify the customer's issue:** Was the representative able to quickly and accurately pinpoint the core problem or request the customer had?
-    -   **Provide acknowledgment, empathy, and reassurance:** Did the representative validate the customer's feelings, show understanding, and assure them that their issue would be handled?
-    -   **Educate the customer:** Did the representative clearly explain solutions, product features, or next steps in an understandable way?
+      const formattedTranscript = currentTranscript
+        .map((msg) => `${msg.from} (${formatTimestamp(msg.timestamp)}): ${msg.text}`)
+        .join("\n");
 
-    **Format your response as a JSON object** with the following structure:
-    {
-      "summary": "A concise summary of the conversation.",
-      "ratings": {
-        "ask_right_questions": { "stars": N, "explanation": "..." },
-        "initiate_sales_discovery": { "stars": N, "explanation": "..." },
-        "actively_listen": { "stars": N, "explanation": "..." },
-        "identify_customer_issue": { "stars": N, "explanation": "..." },
-        "provide_acknowledgment_empathy_reassurance": { "stars": N, "explanation": "..." },
-        "educate_customer": { "stars": N, "explanation": "..." }
-      },
-      "overall_sentiment": "e.g., Positive, Neutral, Negative, Escalating",
-      "areas_for_improvement": ["Suggestion 1", "Suggestion 2"]
-    }
+      const finalPrompt = prePromptInstruction + formattedTranscript;
 
-    Conversation Transcript:
-    `;
-
-    // Format the transcript into a single string
-    const formattedTranscript = currentTranscript
-      .map(
-        (msg) =>
-          `${msg.from} (${formatTimestamp(msg.timestamp)}): ${msg.text}`
-      )
-      .join("\n"); // Join messages with a newline
-
-    // Combine the instruction with the formatted transcript
-    const finalPrompt = prePromptInstruction + formattedTranscript;
-
-    if (!finalPrompt.trim()) {
-      console.warn("Prompt is empty, not sending to Gemini.");
-      setFeedback({ error: "No conversation to audit." });
-      setIsLoadingFeedback(false); // Set loading to false on early exit
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/audit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt: finalPrompt }),
-      });
-
-      if (response.ok) {
-        const geminiFeedback = await response.json();
-        setFeedback(geminiFeedback);
-        console.log("Gemini Feedback:", geminiFeedback);
-      } else {
-        const errorText = await response.text();
-        console.error(
-          "Failed to get Gemini feedback:",
-          response.status,
-          errorText
-        );
-        setFeedback({ error: `Failed to get feedback (${response.status}): ${errorText}` });
+      if (!finalPrompt.trim()) {
+        setFeedback({ error: "No conversation to audit." });
+        setIsLoadingFeedback(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error sending transcript to audit API:", error);
-      setFeedback({ error: "Failed to send transcript for audit" });
-    } finally {
-      setIsLoadingFeedback(false); // Set loading to false after the request completes (success or error)
-    }
-  }, [setFeedback, formatTimestamp]);
+
+      try {
+        const response = await fetch("/api/audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: finalPrompt }),
+        });
+
+        if (response.ok) {
+          const geminiFeedback = await response.json();
+          setFeedback(geminiFeedback);
+        } else {
+          const errorText = await response.text();
+          setFeedback({ error: `Failed to get feedback (${response.status}): ${errorText}` });
+        }
+      } catch (error) {
+        setFeedback({ error: "Failed to send transcript for audit" });
+      } finally {
+        setIsLoadingFeedback(false);
+      }
+    },
+    [selectedScenarioObj]
+  );
 
   const conversation = useConversation({
     onConnect: () => console.log("Connected"),
@@ -146,80 +113,100 @@ export function Conversation() {
       sendTranscriptForAudit(latestTranscriptRef.current);
     },
     onMessage: (message: { message: string; source: "user" | "ai" }) => {
-      console.log("Message:", message);
       const newMessage: Message = {
         from: message.source === "user" ? "You" : "Customer",
         text: message.message,
         timestamp: Date.now(),
       };
-      setTranscript((prevTranscript) => [
-        ...(prevTranscript.map((msg) => ({
-          ...msg,
-          timestamp: msg.timestamp || 0,
-          from: msg.from,
-        })) as Message[]),
-        newMessage,
-      ]);
+      setTranscript((prev) => [...prev, newMessage]);
     },
     onError: (error) => console.error("Error:", error),
   });
 
   const startConversation = useCallback(async () => {
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!selectedScenario) {
+        setFeedback({ error: "Please select a scenario before starting the conversation." });
+        return;
+      }
 
+      await navigator.mediaDevices.getUserMedia({ audio: true });
       await conversation.startSession({
-        agentId: process.env
-          .NEXT_PUBLIC_ELEVENLABS_CONVERSATIONAL_AGENT_GO_DADDY_1 as string,
+        agentId: selectedScenario,
       });
       setTranscript([]);
-      setFeedback(null); // Clear feedback when starting a new conversation
-      setIsLoadingFeedback(false); // Ensure loading is false when starting a new conversation
+      setFeedback(null);
+      setIsLoadingFeedback(false);
     } catch (error) {
-      console.error("Failed to start conversation:", error);
-      setFeedback({ error: `Failed to start conversation: ${error instanceof Error ? error.message : String(error)}` });
-      setIsLoadingFeedback(false); // Ensure loading is false if starting fails
+      setFeedback({
+        error: `Failed to start conversation: ${error instanceof Error ? error.message : String(error)}`,
+      });
+      setIsLoadingFeedback(false);
     }
-  }, [conversation, setTranscript, setFeedback]);
+  }, [conversation]);
 
   const stopConversation = useCallback(async () => {
     await conversation.endSession();
     sendTranscriptForAudit(transcript);
   }, [conversation, transcript, sendTranscriptForAudit]);
 
-  // Save the transcript to localStorage whenever it updates
   useEffect(() => {
     if (transcript.length > 0) {
-      localStorage.setItem(
-        "conversationTranscript",
-        JSON.stringify(transcript)
-      );
+      localStorage.setItem("conversationTranscript", JSON.stringify(transcript));
     } else {
       localStorage.removeItem("conversationTranscript");
     }
   }, [transcript]);
 
-  // Scroll to the bottom of the transcript whenever it updates
   useEffect(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [transcript]);
 
-  const getAuditResult = async (prompt: string) => {
-    const res = await fetch("/api/audit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: prompt }),
-    });
-
-    const data = await res.json();
-    console.log(data.text);
+  const handleScenarioChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedScenario(event.target.value);
   };
+
+  const selectedNarrative = selectedScenarioObj?.["Scenario Narrative"];
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 items-center">
+        <label htmlFor="scenario-select" className="font-semibold">
+          Select Scenario:
+        </label>
+        <select
+          id="scenario-select"
+          className="px-4 py-2 border rounded"
+          value={selectedScenario || ""}
+          onChange={handleScenarioChange}
+        >
+          <option value="" disabled>
+            -- Choose a scenario --
+          </option>
+          {Object.keys(scenarios).flatMap((company: string) =>
+            Object.keys(scenarios[company]).map((scenarioKey) => (
+              <option key={`${company}-${scenarioKey}`} value={scenarios[company][scenarioKey]["Scenario ID"]}>
+                {scenarios[company][scenarioKey].Title}
+              </option>
+            ))
+          )}
+        </select>
+
+        <div className="mt-2 text-center">
+          <h2 className="font-semibold">Scenario Narrative</h2>
+          <p className="pt-2 w-1/2 mx-auto text-center">
+            {selectedScenario ? (
+              selectedNarrative || "Scenario narrative not found."
+            ) : (
+              "Please select a scenario to view the narrative."
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mt-5">
         <button
           onClick={startConversation}
           disabled={conversation.status === Status.Connected}
@@ -241,51 +228,40 @@ export function Conversation() {
           Status: {toTitleCase(conversation.status)}
           <span
             className={`w-3 h-3 rounded-full ml-2 ${
-              conversation.status === Status.Connected
-                ? "bg-green-500"
-                : "bg-red-500"
+              conversation.status === Status.Connected ? "bg-green-500" : "bg-red-500"
             }`}
           ></span>
         </span>
         {conversation.status === Status.Connected && (
-          <p>
-            The customer is {conversation.isSpeaking ? "speaking" : "listening"}
-          </p>
+          <p>The customer is {conversation.isSpeaking ? "speaking" : "listening"}</p>
         )}
       </div>
 
-      {/* Scrollable Transcript Container */}
       {transcript.length > 0 && (
         <div className="mt-4 w-3/4 rounded border p-4 overflow-y-auto max-h-96">
-          <h2 className="text-lg font-semibold mb-2">
-            Conversation Transcript
-          </h2>
+          <h2 className="text-lg font-semibold mb-2">Conversation Transcript</h2>
           <div className="space-y-2" ref={transcriptRef}>
             {transcript.map((msg, index) => (
               <div
                 key={index}
                 className={`p-2 rounded ${
-                  msg.from === "You"
-                    ? "bg-gray-100 text-gray-800"
-                    : "bg-blue-100 text-blue-800"
+                  msg.from === "You" ? "bg-gray-100 text-gray-800" : "bg-blue-100 text-blue-800"
                 }`}
               >
-                <span className="font-semibold">{msg.from}:</span> {msg.text}
+                {new Date(msg.timestamp).toLocaleTimeString() + " "}<span className="font-semibold bg-transparent">{msg.from}:</span> {msg.text}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Loading Indicator for AI Feedback */}
       {isLoadingFeedback && (
         <div className="mt-4 w-3/4">
-        <LoadingSpinner message="Please wait while I review your response..." size="large" />
-      </div>
+          <LoadingSpinner message="Please wait while I review your response..." size="large" />
+        </div>
       )}
 
-      {/* Display AI's Feedback */}
-      {feedback && !isLoadingFeedback && ( // Only show feedback if not loading
+      {feedback && !isLoadingFeedback && (
         <div className="mt-4 w-3/4">
           <Feedback feedback={feedback} />
         </div>
