@@ -196,7 +196,7 @@ export function Conversation() {
 
         <div className="mt-2 text-center">
           <h2 className="font-semibold">Scenario Narrative</h2>
-          <p className="pt-2 w-1/2 mx-auto text-center">
+          <p className="pt-2 w-1/2 min-w-lg mx-auto text-center">
             {selectedScenario ? (
               selectedNarrative || "Scenario narrative not found."
             ) : (
