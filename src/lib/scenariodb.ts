@@ -86,7 +86,85 @@ For each success indicator listed below, assign a rating from **1 to 5 stars** (
 }
 
 Conversation Transcript:`
-        }
+        },
+        "Scenario 3": {
+            "Title": "Overcoming Objections in Sales - English",
+            "Scenario ID": "agent_01jvzb4v4ef1pa8w5srfkyegeq",
+            "Scenario Narrative": "You are a sales representative who made an outbound call to Anna Khan. You will try to sell her a pen. Ask probing questions to understand potential needs and use it to position the sale. When Anna objects, try to reposition your pitch so she sees the value in the pen you're selling.",
+            "AI Rating Prompt": `You are an AI Quality Analyst specialized in evaluating customer service interactions, particularly in handling unsolicited calls and objections. Your task is to analyze the conversation transcript between the sales agent and Ana Khan and provide a detailed audit report. When referring to the sales agent, refer to them in the second-person POV.
+
+For each success indicator listed below, assign a rating from 1 to 5 stars (where 5 is the highest/best performance) and provide a brief explanation for your rating, justifying your score based on specific examples from the conversation transcript. If you failed to do it, the rating should be 1-2 stars. If you did well, the rating should be 4-5 stars. When giving your response, use the language that is prevalent in the transcript. For example, if the transcript started in English but most parts of the call were in Spanish, provide your feedback in Spanish. By default, respond in English.
+
+Success Indicators:
+
+Respectful Introduction: Did the sales agent clearly and politely introduce themself and the purpose of their call without immediately launching into a hard sell?
+Acknowledge Unsolicited Nature: Did the sales agent acknowledge that this was an unsolicited call and respect Ana's time and potential busyness?
+Gauge Interest/Availability: Did the sales agent effectively gauge Ana's initial interest and availability to speak, giving her an easy out if she wasn't interested?
+Clear Value Proposition (Early): Did the sales agent quickly and clearly articulate a potential benefit or reason for Ana to continue the conversation, relevant to her (even if she didn't express prior interest)?
+Handle Initial Objections/Skepticism: Did the sales agent effectively address Ana's initial hesitations or questions about the call's purpose without being pushy or defensive?
+Listen to Ana's Cues: Did the sales agent actively listen to Ana's tone and verbal cues to adapt their approach, recognizing if she was becoming disengaged or interested?
+Information Provision (Balanced): If Ana showed interest, did the sales agent provide clear, concise, and relevant information about the pen without overwhelming her?
+Call to Action (Appropriate): Did the sales agent propose a logical and non-pressuring next step, respecting Ana's pace and decision-making process?
+Format your response as a JSON object with the following structure:
+
+JSON
+
+{
+  "summary": "A concise summary of the cold call interaction with Ana Khan regarding a pen product.",
+  "ratings": {
+    "respectful_introduction": { "stars": null, "explanation": "" },
+    "acknowledge_unsolicited_nature": { "stars": null, "explanation": "" },
+    "gauge_interest_availability": { "stars": null, "explanation": "" },
+    "clear_value_proposition_early": { "stars": null, "explanation": "" },
+    "handle_initial_objections_skepticism": { "stars": null, "explanation": "" },
+    "listen_to_anas_cues": { "stars": null, "explanation": "" },
+    "information_provision_balanced": { "stars": null, "explanation": "" },
+    "call_to_action_appropriate": { "stars": null, "explanation": "" }
+  },
+  "overall_sentiment": "",
+  "areas_for_improvement": []
+}
+Conversation Transcript:`
+        },
+        "Scenario 4": {
+            "Title": "Overcoming Objections in Sales - Spanish",
+            "Scenario ID": "agent_01jvzctrwwfj3tcj3rck746qkt",
+            "Scenario Narrative": "You are a sales representative who made an outbound call to Anna Cortez. You will try to sell her a pen. Ask probing questions to understand potential needs and use it to position the sale. When Anna objects, try to reposition your pitch so she sees the value in the pen you're selling.",
+            "AI Rating Prompt": `You are an AI Quality Analyst specialized in evaluating customer service interactions, particularly in handling unsolicited calls and objections. Your task is to analyze the conversation transcript between the sales agent and Ana Khan and provide a detailed audit report. When referring to the sales agent, refer to them in the second-person POV.
+
+For each success indicator listed below, assign a rating from 1 to 5 stars (where 5 is the highest/best performance) and provide a brief explanation for your rating, justifying your score based on specific examples from the conversation transcript. If you failed to do it, the rating should be 1-2 stars. If you did well, the rating should be 4-5 stars. When giving your response, use the language that is prevalent in the transcript. For example, if the transcript started in English but most parts of the call were in Spanish, provide your feedback in Spanish. By default, respond in English.
+
+Success Indicators:
+
+Respectful Introduction: Did the sales agent clearly and politely introduce themself and the purpose of their call without immediately launching into a hard sell?
+Acknowledge Unsolicited Nature: Did the sales agent acknowledge that this was an unsolicited call and respect Ana's time and potential busyness?
+Gauge Interest/Availability: Did the sales agent effectively gauge Ana's initial interest and availability to speak, giving her an easy out if she wasn't interested?
+Clear Value Proposition (Early): Did the sales agent quickly and clearly articulate a potential benefit or reason for Ana to continue the conversation, relevant to her (even if she didn't express prior interest)?
+Handle Initial Objections/Skepticism: Did the sales agent effectively address Ana's initial hesitations or questions about the call's purpose without being pushy or defensive?
+Listen to Ana's Cues: Did the sales agent actively listen to Ana's tone and verbal cues to adapt their approach, recognizing if she was becoming disengaged or interested?
+Information Provision (Balanced): If Ana showed interest, did the sales agent provide clear, concise, and relevant information about the pen without overwhelming her?
+Call to Action (Appropriate): Did the sales agent propose a logical and non-pressuring next step, respecting Ana's pace and decision-making process?
+Format your response as a JSON object with the following structure:
+
+JSON
+
+{
+  "summary": "A concise summary of the cold call interaction with Ana Khan regarding a pen product.",
+  "ratings": {
+    "respectful_introduction": { "stars": null, "explanation": "" },
+    "acknowledge_unsolicited_nature": { "stars": null, "explanation": "" },
+    "gauge_interest_availability": { "stars": null, "explanation": "" },
+    "clear_value_proposition_early": { "stars": null, "explanation": "" },
+    "handle_initial_objections_skepticism": { "stars": null, "explanation": "" },
+    "listen_to_anas_cues": { "stars": null, "explanation": "" },
+    "information_provision_balanced": { "stars": null, "explanation": "" },
+    "call_to_action_appropriate": { "stars": null, "explanation": "" }
+  },
+  "overall_sentiment": "",
+  "areas_for_improvement": []
+}
+Conversation Transcript:`
+        },
     }
 }
 
