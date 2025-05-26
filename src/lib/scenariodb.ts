@@ -51,7 +51,7 @@ const scenarios: Scenarios = {
                                 `,
         },
         "Scenario 2": {
-            "Title": "Coaching on Tardiness English | Hindi | Tamil",
+            "Title": "Coaching on Tardiness English | Hindi ",
             "Scenario ID": "agent_01jvym8ndxe7rtmms63ehpqhc5",
             "Scenario Narrative": "Elsa, a Sutherland employee who is about to be regularized, needs to be coached on her tardiness. She arrived late twice last week. Prior to this, she had 3 more instances of tardiness in the previous month.",
             "AI Rating Prompt": `You are an AI Quality Analyst specialized in evaluating management coaching effectiveness. Your task is to analyze the coaching session transcript and provide a detailed audit report. When referring to the team manager, refer to them in the second-person POV.
@@ -88,6 +88,43 @@ For each success indicator listed below, assign a rating from **1 to 5 stars** (
 Conversation Transcript:`
         },
         "Scenario 3": {
+            "Title": "Coaching on Tardiness | Tamil ",
+            "Scenario ID": "agent_01jw662pfwfjvss7geqk7c6ts2",
+            "Scenario Narrative": "சதர்லாந்தில் பணிபுரியும் எல்சா, விரைவில் பணி நிரந்தரம் செய்யப்படவுள்ளார். அவருக்கு காலந்தவறாமை குறித்த பயிற்சி தேவை. கடந்த வாரம் அவர் இரண்டு முறை தாமதமாக வந்தார். இதற்கு முன்பு, கடந்த மாதத்தில் அவர் 3 முறை தாமதமாக வந்துள்ளார்.",
+            "AI Rating Prompt": `You are an AI Quality Analyst specialized in evaluating management coaching effectiveness. Your task is to analyze the coaching session transcript and provide a detailed audit report. When referring to the team manager, refer to them in the second-person POV.
+
+For each success indicator listed below, assign a rating from **1 to 5 stars** (where 5 is the highest/best performance) and provide a **brief explanation** for your rating, justifying your score based on specific examples from the conversation transcript. If the manager failed to do it, the rating should be 1-2 stars. If the manager did well, the rating should be 4-5 stars.
+
+**Success Indicators:**
+-   **Establish Rapport:** Did the manager create a comfortable and trusting environment for Elsa to openly discuss her tardiness?
+-   **Clarify Performance Gap:** Did the manager clearly and respectfully explain the impact of Elsa's tardiness on the team and the company?
+-   **Explore Root Causes:** Did the manager effectively explore the reasons behind Elsa's tardiness, going beyond surface-level explanations?
+-   **Active Listening and Empathy:** Did the manager actively listen to Elsa's perspective, show empathy for her challenges, and validate her feelings?
+-   **Collaborative Goal Setting:** Did the manager work with Elsa to set specific, measurable, achievable, relevant, and time-bound (SMART) goals for improving her punctuality?
+-   **Action Planning and Support:** Did the manager and Elsa develop a concrete action plan with specific steps and resources to help Elsa be on time? Did the manager offer support and resources?
+-   **Empowerment and Ownership:** Did the manager empower Elsa to take ownership of her punctuality and develop her own solutions?
+-   **Follow-Up and Accountability:** Did the manager establish a clear plan for follow-up and accountability to ensure Elsa stays on track with her goals?
+
+**Format your response as a JSON object** with the following structure:
+{
+"summary": "A concise summary of the coaching session with Elsa regarding her recent tardiness.",
+"ratings": {
+    "establish_rapport": { "stars": N, "explanation": "..." },
+    "clarify_performance_gap": { "stars": N, "explanation": "..." },
+    "explore_root_causes": { "stars": N, "explanation": "..." },
+    "active_listening_and_empathy": { "stars": N, "explanation": "..." },
+    "collaborative_goal_setting": { "stars": N, "explanation": "..." },
+    "action_planning_and_support": { "stars": N, "explanation": "..." },
+    "empowerment_and_ownership": { "stars": N, "explanation": "..." },
+    "follow_up_and_accountability": { "stars": N, "explanation": "..." }
+},
+"overall_sentiment": "e.g., Constructive, Neutral, Avoidant, Confrontational",
+"areas_for_improvement": ["Suggestion 1", "Suggestion 2"]
+}
+
+Conversation Transcript:`
+        },
+        "Scenario 4": {
             "Title": "Overcoming Objections in Sales - English",
             "Scenario ID": "agent_01jvzb4v4ef1pa8w5srfkyegeq",
             "Scenario Narrative": "You are a sales representative who made an outbound call to Anna Khan. You will try to sell her a pen. Ask probing questions to understand potential needs and use it to position the sale. When Anna objects, try to reposition your pitch so she sees the value in the pen you're selling.",
@@ -126,7 +163,7 @@ JSON
 }
 Conversation Transcript:`
         },
-        "Scenario 4": {
+        "Scenario 5": {
             "Title": "Overcoming Objections in Sales - Spanish",
             "Scenario ID": "agent_01jvzctrwwfj3tcj3rck746qkt",
             "Scenario Narrative": "You are a sales representative who made an outbound call to Anna Cortez. You will try to sell her a pen. Ask probing questions to understand potential needs and use it to position the sale. When Anna objects, try to reposition your pitch so she sees the value in the pen you're selling.",
